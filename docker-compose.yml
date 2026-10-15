@@ -1,0 +1,25 @@
+services:
+  argus-terminal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: argus-quant:2.3.0
+    container_name: argus-quant-terminal
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    environment:
+      - DATA_DIR=/app/data
+      - LOG_LEVEL=INFO
+      - DEFAULT_BROKER=dry_run
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Argus Quant | Institutional Trading Terminal</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23161c20%22/><path d=%22M20 75 L45 25 L55 25 L80 75 L65 75 L50 42 L35 75 Z%22 fill=%22%2300c278%22/></svg>">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            xtb: {
+              bg: '#111618',
+              panel: '#161c20',
+              card: '#1a2126',
+              border: '#263038',
+              emerald: '#00c278',
+              coral: '#f6465d',
+              amber: '#f59e0b',
+              steel: '#8392a5',
+              text: '#f0f4f8',
+              hover: '#1e262c'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body class="bg-xtb-bg text-xtb-text min-h-screen flex flex-col font-sans antialiased select-none">
+
+  <!-- ========================================================================= -->
+  <!-- TOP HEADER / ACCOUNT STRIP (XTB TOP BAR)                                  -->
+  <!-- ========================================================================= -->
+  <header class="bg-xtb-panel border-b border-xtb-border px-5 py-2.5 flex items-center justify-between sticky top-0 z-40">
+    <div class="flex items-center gap-6 flex-wrap">
+      <!-- Logo -->
+      <div class="flex items-center gap-2 cursor-pointer" onclick="switchView('terminal')">
+        <span class="text-xl font-black tracking-tight text-white">ARGUS <span class="text-xtb-emerald">QUANT</span></span>
+        <span class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-xtb-card border border-xtb-border text-xtb-steel">xStation</span>
+      </div>
+
+      <!-- Account Metrics Strip -->
+      <div class="flex items-center gap-5 border-l border-xtb-border pl-5">
+        <div class="flex flex-col">
+          <span class="text-[10px] font-bold uppercase text-xtb-steel tracking-wider">Portfolio Value</span>
+          <span id="hdr-port-val" class="text-[15px] font-bold font-mono-num text-white">$100,000.00</span>
+        </div>
+        <div class="flex flex-col">
+          <span class="text-[10px] font-bold uppercase text-xtb-steel tracking-wider">Free Cash</span>
+          <span id="hdr-cash-val" class="text-[15px] font-bold font-mono-num text-white">$25,000.00</span>
+        </div>
+        <div class="flex flex-col">
+          <span class="text-[10px] font-bold uppercase text-xtb-steel tracking-wider">Buying Power</span>
+          <span id="hdr-bp-val" class="text-[15px] font-bold font-mono-num text-white">$50,000.00</span>
+        </div>
+        <div class="flex flex-col">
+          <span class="text-[10px] font-bold uppercase text-xtb-steel tracking-wider">Market Regime</span>
+          <span id="hdr-regime" class="text-[14px] font-semibold text-white">Low Vol Bull <span class="text-xs text-xtb-steel font-mono-num" id="hdr-vix">(VIX 18.5)</span></span>
+        </div>
+        <div class="flex flex-col">
+          <span class="text-[10px] font-bold uppercase text-xtb-steel tracking-wider">Confidence Filter</span>
+          <div id="hdr-confidence-badge" class="mt-0.5">
+            <span class="px-2 py-0.5 rounded text-[11px] font-extrabold bg-xtb-emerald text-black tracking-wide">SAFE (100%)</span>
+          </div>
+        </div>
+        <div class="flex flex-col cursor-pointer" onclick="switchView('risk')" title="Click to view Intraday Risk Monitor">
+          <span class="text-[10px] font-bold uppercase text-xtb-steel tracking-wider">Risk Monitor</span>
+          <div id="hdr-risk-badge" class="mt-0.5">
+            <span class="px-2 py-0.5 rounded text-[11px] font-extrabold bg-xtb-emerald text-black tracking-wide">NORMAL</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Header Right Controls -->
+    <div class="flex items-center gap-3">
+      <span id="hdr-broker-tag" class="px-2.5 py-1 rounded text-xs font-mono font-semibold bg-xtb-card border border-xtb-border text-sky-400">
+        BROKER: DRY RUN (PAPER)
+      </span>
+      <button onclick="refreshSnapshot()" title="Refresh pre-computed snapshot" class="p-2 rounded bg-xtb-card border border-xtb-border hover:bg-xtb-hover text-xtb-steel hover:text-white transition flex items-center justify-center">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+      </button>
+      <button onclick="switchView('sizer')" class="px-3.5 py-1.5 rounded bg-xtb-emerald hover:bg-emerald-400 text-black font-bold text-xs tracking-wide transition flex items-center gap-1.5">
+        Rebalance
+      </button>
+    </div>
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- MAIN WORKSPACE LAYOUT (LEFT NAV RAIL + MAIN CONTENT)                     -->
+  <!-- ========================================================================= -->
+  <div class="flex flex-1 overflow-hidden">
+    
+    <!-- Left Navigation Rail -->
+    <aside class="w-16 bg-xtb-panel border-r border-xtb-border flex flex-col items-center py-4 gap-6 shrink-0 z-30">
+      <button onclick="switchView('terminal')" id="nav-btn-terminal" class="nav-btn p-3 rounded-lg text-xtb-emerald bg-xtb-card border border-xtb-border hover:text-white transition flex flex-col items-center gap-1.5" title="Trading Terminal">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+        <span class="text-[9px] font-bold uppercase tracking-tighter">Terminal</span>
+      </button>
+      <button onclick="switchView('sizer')" id="nav-btn-sizer" class="nav-btn p-3 rounded-lg text-xtb-steel hover:text-white hover:bg-xtb-card transition flex flex-col items-center gap-1.5" title="Capital Sizer & Slips">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"></path></svg>
+        <span class="text-[9px] font-bold uppercase tracking-tighter">Sizer</span>
+      </button>
+      <button onclick="switchView('sanity')" id="nav-btn-sanity" class="nav-btn p-3 rounded-lg text-xtb-steel hover:text-white hover:bg-xtb-card transition flex flex-col items-center gap-1.5" title="AI Intelligence & Sanity">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+        <span class="text-[9px] font-bold uppercase tracking-tighter">Sanity</span>
+      </button>
+      <button onclick="switchView('risk')" id="nav-btn-risk" class="nav-btn p-3 rounded-lg text-xtb-steel hover:text-white hover:bg-xtb-card transition flex flex-col items-center gap-1.5" title="Intraday Risk Monitor & Circuit Breakers">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        <span class="text-[9px] font-bold uppercase tracking-tighter">Risk</span>
+      </button>
+      <button onclick="switchView('ledger')" id="nav-btn-ledger" class="nav-btn p-3 rounded-lg text-xtb-steel hover:text-white hover:bg-xtb-card transition flex flex-col items-center gap-1.5" title="Execution Ledger">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+        <span class="text-[9px] font-bold uppercase tracking-tighter">Ledger</span>
+      </button>
+      <button onclick="switchView('settings')" id="nav-btn-settings" class="nav-btn p-3 rounded-lg text-xtb-steel hover:text-white hover:bg-xtb-card transition flex flex-col items-center gap-1.5" title="Settings & Broker">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+        <span class="text-[9px] font-bold uppercase tracking-tighter">Settings</span>
+      </button>
+    </aside>
+
+    <!-- Main View Switcher Container -->
+    <main class="flex-1 flex flex-col overflow-y-auto">
+
+      <!-- ===================================================================== -->
+      <!-- VIEW 1: TRADING TERMINAL (Split Workspace)                           -->
+      <!-- ===================================================================== -->
+      <section id="view-terminal" class="flex-1 flex flex-col p-4 gap-4">
+        
+        <!-- Top Split Workspace (Left Watchlist 58% | Right Inspector 42%) -->
+        <div class="grid grid-cols-12 gap-4 flex-1 min-h-[480px]">
+          
+          <!-- LEFT: High-Density Watchlist (7 cols) -->
+          <div class="col-span-7 bg-xtb-panel border border-xtb-border rounded-lg flex flex-col overflow-hidden">
+            <!-- Watchlist Header & Filters -->
+            <div class="p-3 border-b border-xtb-border flex items-center justify-between gap-3 bg-[#14191d]">
+              <!-- Search Bar -->
+              <div class="relative flex-1">
+                <input type="text" id="watchlist-search" placeholder="Search ticker or company name..." oninput="onSearchChange(this.value)" class="w-full bg-xtb-card border border-xtb-border rounded px-3 py-1.5 text-xs text-white placeholder-xtb-steel focus:outline-none focus:border-xtb-emerald transition font-mono pr-8" />
+                <span class="absolute right-2.5 top-2 text-xs text-xtb-steel pointer-events-none">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </span>
+              </div>
+              
+              <!-- Filter Tabs -->
+              <div class="flex items-center gap-1 bg-xtb-card p-1 rounded border border-xtb-border text-[11px] font-semibold">
+                <button onclick="setWatchlistFilter('top')" id="filter-btn-top" class="px-2.5 py-1 rounded bg-xtb-panel text-white transition">Top Picks</button>
+                <button onclick="setWatchlistFilter('orders')" id="filter-btn-orders" class="px-2.5 py-1 rounded text-xtb-steel hover:text-white transition">Orders Only</button>
+                <button onclick="setWatchlistFilter('held')" id="filter-btn-held" class="px-2.5 py-1 rounded text-xtb-steel hover:text-white transition">Held Names</button>
+                <button onclick="setWatchlistFilter('all')" id="filter-btn-all" class="px-2.5 py-1 rounded text-xtb-steel hover:text-white transition">All (100)</button>
+              </div>
+            </div>
+
+            <!-- High-Density Watchlist Table -->
+            <div class="flex-1 overflow-y-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead class="bg-[#182026] text-xtb-steel font-bold uppercase tracking-wider sticky top-0 border-b border-xtb-border text-[10px]">
+                  <tr>
+                    <th class="py-2 px-3">Ticker</th>
+                    <th class="py-2 px-3">Company</th>
+                    <th class="py-2 px-3">Action</th>
+                    <th class="py-2 px-3">Rank</th>
+                    <th class="py-2 px-3 text-right">Price</th>
+                    <th class="py-2 px-3 text-right">Target %</th>
+                    <th class="py-2 px-3 text-right">Vol %</th>
+                    <th class="py-2 px-3">Sector</th>
+                  </tr>
+                </thead>
+                <tbody id="watchlist-tbody" class="divide-y divide-xtb-border/60">
+                  <!-- Rendered dynamically by app.js -->
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- Table Footer Status -->
+            <div class="p-2 border-t border-xtb-border bg-[#14191d] text-[11px] text-xtb-steel flex justify-between items-center">
+              <span id="watchlist-count-label">Showing 15 constituents</span>
+              <span class="font-mono text-[10px]">Click any row to inspect & trade</span>
+            </div>
+          </div>
+
+          <!-- RIGHT: Stock Inspector & Direct Order Ticket (5 cols) -->
+          <div class="col-span-5 bg-xtb-panel border border-xtb-border rounded-lg flex flex-col overflow-hidden">
+            
+            <!-- Inspector Header Box -->
+            <div class="p-4 border-b border-xtb-border bg-[#14191d]">
+              <div class="flex justify-between items-start">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span id="insp-ticker" class="text-2xl font-black font-mono text-sky-400">AAPL</span>
+                    <span id="insp-badge" class="px-2 py-0.5 rounded text-xs font-bold badge-buy">BUY</span>
+                  </div>
+                  <div id="insp-name-sector" class="text-xs text-xtb-steel mt-0.5">Apple Inc. &bull; Information Technology</div>
+                </div>
+                <div class="text-right">
+                  <div id="insp-price" class="text-2xl font-black font-mono-num text-white">$182.50</div>
+                  <div id="insp-rank" class="text-xs text-xtb-steel font-mono font-semibold">RANK #1 (↑2)</div>
+                </div>
+              </div>
+
+              <!-- Quick Metrics Row -->
+              <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-xtb-border/80 text-xs">
+                <div>
+                  <span class="text-[10px] uppercase text-xtb-steel block">Target Weight</span>
+                  <span id="insp-target-w" class="font-mono-num font-bold text-white">7.8%</span>
+                </div>
+                <div>
+                  <span class="text-[10px] uppercase text-xtb-steel block">Predicted Vol</span>
+                  <span id="insp-vol" class="font-mono-num font-bold text-white">18.4%</span>
+                </div>
+                <div>
+                  <span class="text-[10px] uppercase text-xtb-steel block">Model Score</span>
+                  <span id="insp-score" class="font-mono-num font-bold text-white">+0.084</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Inspector Sub-Tabs -->
+            <div class="flex border-b border-xtb-border bg-xtb-card text-xs font-semibold">
+              <button onclick="setInspectorTab('drivers')" id="insp-tab-drivers" class="flex-1 py-2 text-center text-xtb-emerald border-b-2 border-xtb-emerald transition">AI Drivers</button>
+              <button onclick="setInspectorTab('valuation')" id="insp-tab-valuation" class="flex-1 py-2 text-center text-xtb-steel hover:text-white transition">Valuation</button>
+              <button onclick="setInspectorTab('news')" id="insp-tab-news" class="flex-1 py-2 text-center text-xtb-steel hover:text-white transition">News</button>
+              <button onclick="setInspectorTab('ticket')" id="insp-tab-ticket" class="flex-1 py-2 text-center text-xtb-steel hover:text-white transition">Ticket</button>
+            </div>
+
+            <!-- Inspector Tab Contents -->
+            <div class="flex-1 p-4 overflow-y-auto">
+              
+              <!-- Tab 1: AI Drivers & Rationale -->
+              <div id="insp-pane-drivers" class="space-y-3">
+                <span class="text-xs font-bold uppercase tracking-wider text-xtb-steel block">Quantitative Drivers & SHAP Attributions</span>
+                <div id="insp-drivers-list" class="space-y-2.5">
+                  <!-- Dynamic SHAP meters rendered by app.js -->
+                </div>
+              </div>
+
+              <!-- Tab 1b: Corporate Valuation Fundamentals -->
+              <div id="insp-pane-valuation" class="hidden space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold uppercase tracking-wider text-xtb-steel block">Corporate Valuation Ratios</span>
+                  <span class="text-[10px] font-mono text-xtb-emerald px-1.5 py-0.5 rounded bg-xtb-card border border-xtb-border">Barra Multiples</span>
+                </div>
+                <div id="insp-valuation-grid" class="grid grid-cols-2 gap-2 text-xs">
+                  <!-- Rendered dynamically by app.js -->
+                </div>
+              </div>
+
+              <!-- Tab 2: Scored News Stream -->
+              <div id="insp-pane-news" class="hidden space-y-3">
+                <span class="text-xs font-bold uppercase tracking-wider text-xtb-steel block">FinBERT Scored Headlines (2-Day Window)</span>
+                <div id="insp-news-list" class="space-y-2">
+                  <!-- Dynamic news stream rendered by app.js -->
+                </div>
+              </div>
+
+              <!-- Tab 3: Direct Broker Order Ticket -->
+              <div id="insp-pane-ticket" class="hidden space-y-4">
+                <span class="text-xs font-bold uppercase tracking-wider text-xtb-steel block">Quick Execution Ticket</span>
+                
+                <!-- Side Selector -->
+                <div class="grid grid-cols-2 gap-2">
+                  <button type="button" onclick="setOrderSide('buy')" id="btn-side-buy" class="py-2 rounded font-bold text-xs uppercase tracking-wide bg-xtb-emerald text-black border border-xtb-emerald transition">BUY</button>
+                  <button type="button" onclick="setOrderSide('sell')" id="btn-side-sell" class="py-2 rounded font-bold text-xs uppercase tracking-wide bg-xtb-card text-xtb-steel border border-xtb-border hover:text-white transition">SELL</button>
+                </div>
+
+                <!-- Shares Input -->
+                <div class="space-y-1">
+                  <label class="text-xs text-xtb-steel font-semibold block">Order Quantity (Shares)</label>
+                  <div class="flex items-center gap-2">
+                    <input type="number" id="order-qty-input" min="1" step="1" value="10" oninput="updateOrderEstCost()" class="w-full bg-xtb-card border border-xtb-border rounded px-3 py-2 font-mono text-sm text-white focus:outline-none focus:border-xtb-emerald" />
+                    <button type="button" onclick="adjustOrderQty(-5)" class="px-2.5 py-2 bg-xtb-card border border-xtb-border rounded text-xs text-xtb-steel hover:text-white">-5</button>
+                    <button type="button" onclick="adjustOrderQty(5)" class="px-2.5 py-2 bg-xtb-card border border-xtb-border rounded text-xs text-xtb-steel hover:text-white">+5</button>
+                  </div>
+                </div>
+
+                <!-- Notional Cost & Order Type -->
+                <div class="p-3 bg-xtb-card border border-xtb-border rounded space-y-1 text-xs">
+                  <div class="flex justify-between">
+                    <span class="text-xtb-steel">Order Type</span>
+                    <span class="font-semibold text-white">MARKET (Day)</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-xtb-steel">Estimated Price</span>
+                    <span id="order-est-px" class="font-mono-num font-semibold text-white">$182.50</span>
+                  </div>
+                  <div class="flex justify-between border-t border-xtb-border pt-1 font-bold text-sm">
+                    <span class="text-white">Estimated Value</span>
+                    <span id="order-est-total" class="font-mono-num text-xtb-emerald">$1,825.00</span>
+                  </div>
+                </div>
+
+                <!-- Confirmation Guard & Transmit Button -->
+                <div class="space-y-2">
+                  <label class="flex items-center gap-2 text-xs text-xtb-steel cursor-pointer">
+                    <input type="checkbox" id="order-confirm-chk" onchange="toggleOrderSubmitBtn()" class="rounded border-xtb-border bg-xtb-card text-xtb-emerald focus:ring-0" />
+                    <span>Confirm execution with broker engine</span>
+                  </label>
+                  <button type="button" id="btn-submit-order" onclick="submitSingleOrder()" disabled class="w-full py-2.5 rounded font-extrabold text-xs uppercase tracking-wide bg-xtb-emerald text-black opacity-50 cursor-not-allowed transition">
+                    Transmit Order to Broker
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- BOTTOM DRAWER: POSITIONS, TARGET ORDERS & TRADE HISTORY              -->
+        <!-- =================================================================== -->
+        <div class="bg-xtb-panel border border-xtb-border rounded-lg flex flex-col overflow-hidden min-h-[220px]">
+          
+          <!-- Drawer Header Tabs -->
+          <div class="flex items-center justify-between border-b border-xtb-border bg-[#14191d] px-3 py-1.5">
+            <div class="flex items-center gap-1 text-xs font-bold">
+              <button onclick="setDrawerTab('positions')" id="drawer-tab-positions" class="px-3 py-1.5 rounded bg-xtb-card text-white border border-xtb-border transition">Open Positions</button>
+              <button onclick="setDrawerTab('rebalance')" id="drawer-tab-rebalance" class="px-3 py-1.5 rounded text-xtb-steel hover:text-white transition">Target Orders & Rebalance</button>
+              <button onclick="setDrawerTab('sectors')" id="drawer-tab-sectors" class="px-3 py-1.5 rounded text-xtb-steel hover:text-white transition">Sector Exposure & Barra</button>
+              <button onclick="setDrawerTab('fills')" id="drawer-tab-fills" class="px-3 py-1.5 rounded text-xtb-steel hover:text-white transition">Trade History</button>
+            </div>
+            <div id="drawer-summary-right" class="text-xs text-xtb-steel font-mono">
+              <!-- Summary numbers rendered by app.js -->
+            </div>
+          </div>
+
+          <!-- Drawer Tab 1: Open Positions -->
+          <div id="drawer-pane-positions" class="flex-1 overflow-y-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead class="bg-[#182026] text-xtb-steel font-bold uppercase tracking-wider sticky top-0 border-b border-xtb-border text-[10px]">
+                <tr>
+                  <th class="py-2 px-3">Ticker</th>
+                  <th class="py-2 px-3 text-right">Shares Held</th>
+                  <th class="py-2 px-3 text-right">Avg Cost</th>
+                  <th class="py-2 px-3 text-right">Market Price</th>
+                  <th class="py-2 px-3 text-right">Market Value</th>
+                  <th class="py-2 px-3 text-right">Unrealized P&L ($)</th>
+                  <th class="py-2 px-3 text-right">Return (%)</th>
+                </tr>
+              </thead>
+              <tbody id="positions-tbody" class="divide-y divide-xtb-border/60 font-mono-num">
+                <!-- Rendered dynamically by app.js -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Drawer Tab 2: Target Orders Rebalance Book -->
+          <div id="drawer-pane-rebalance" class="hidden flex-1 overflow-y-auto p-3 space-y-3">
+            <div class="flex justify-between items-center bg-xtb-card p-3 rounded border border-xtb-border">
+              <div id="rebalance-status-msg" class="text-xs text-white">
+                Checking portfolio drift against 0.5% turnover buffer...
+              </div>
+              <button type="button" id="btn-batch-rebalance" onclick="executeBatchRebalance()" class="px-4 py-1.5 rounded bg-xtb-emerald hover:bg-emerald-400 text-black font-extrabold text-xs tracking-wide transition">
+                Execute All Target Orders
+              </button>
+            </div>
+            <table class="w-full text-left text-xs border-collapse">
+              <thead class="bg-[#182026] text-xtb-steel font-bold uppercase tracking-wider sticky top-0 border-b border-xtb-border text-[10px]">
+                <tr>
+                  <th class="py-2 px-3">Ticker</th>
+                  <th class="py-2 px-3">Action</th>
+                  <th class="py-2 px-3 text-right">Current %</th>
+                  <th class="py-2 px-3 text-right">Target %</th>
+                  <th class="py-2 px-3 text-right">Delta %</th>
+                  <th class="py-2 px-3 text-right">Est Shares</th>
+                  <th class="py-2 px-3 text-right">Trade Value</th>
+                </tr>
+              </thead>
+              <tbody id="rebalance-tbody" class="divide-y divide-xtb-border/60 font-mono-num">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Drawer Tab 2b: Sector Exposure & Barra Neutralization Matrix -->
+          <div id="drawer-pane-sectors" class="hidden flex-1 overflow-y-auto p-3 space-y-4">
+            <div class="grid grid-cols-12 gap-3">
+              
+              <!-- Left 7 cols: Sector Allocation Breakdown -->
+              <div class="col-span-7 bg-xtb-card border border-xtb-border rounded-lg p-3 space-y-2">
+                <div class="flex items-center justify-between border-b border-xtb-border pb-2">
+                  <div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-white">GICS Sector Allocation Breakdown</span>
+                    <span class="text-[10px] text-xtb-steel block">Enforcing max 25% single sector weight limit and max 3 names per sector</span>
+                  </div>
+                  <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-[#182026] text-xtb-emerald border border-xtb-border font-bold">Cap: 25.0%</span>
+                </div>
+                <div id="sector-cards-list" class="space-y-2 max-h-[160px] overflow-y-auto pr-1 font-mono-num text-xs">
+                  <!-- Dynamic sector exposure cards rendered by app.js -->
+                </div>
+              </div>
+
+              <!-- Right 5 cols: Barra Factor Neutralization Diagnostics -->
+              <div class="col-span-5 bg-xtb-card border border-xtb-border rounded-lg p-3 space-y-2">
+                <div class="flex items-center justify-between border-b border-xtb-border pb-2">
+                  <span class="text-xs font-bold uppercase tracking-wider text-white">Barra Factor Neutralization Diagnostics</span>
+                  <span id="barra-neutral-mode" class="text-[10px] font-mono px-2 py-0.5 rounded bg-xtb-panel text-sky-400 border border-xtb-border">Full Barra</span>
+                </div>
+                <div id="barra-diagnostics-body" class="space-y-2 text-xs">
+                  <!-- Dynamic Barra factor matrix & correlations rendered by app.js -->
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Drawer Tab 3: Trade History (Fills) -->
+          <div id="drawer-pane-fills" class="hidden flex-1 overflow-y-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead class="bg-[#182026] text-xtb-steel font-bold uppercase tracking-wider sticky top-0 border-b border-xtb-border text-[10px]">
+                <tr>
+                  <th class="py-2 px-3">Date</th>
+                  <th class="py-2 px-3">Ticker</th>
+                  <th class="py-2 px-3">Action</th>
+                  <th class="py-2 px-3 text-right">Shares</th>
+                  <th class="py-2 px-3 text-right">Price</th>
+                  <th class="py-2 px-3">Broker / Status</th>
+                  <th class="py-2 px-3">Order ID</th>
+                </tr>
+              </thead>
+              <tbody id="fills-tbody" class="divide-y divide-xtb-border/60 font-mono-num">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- VIEW 2: CAPITAL SIZER & ORDER SLIPS                                  -->
+      <!-- ===================================================================== -->
+      <section id="view-sizer" class="hidden flex-1 p-6 space-y-6 max-w-7xl mx-auto w-full">
+        <div class="flex justify-between items-center border-b border-xtb-border pb-4">
+          <div>
+            <h1 class="text-xl font-black text-white">Interactive Capital Sizer</h1>
+            <p class="text-xs text-xtb-steel">Turnover-buffered portfolio allocator with retail order slips and direct broker transmission.</p>
+          </div>
+          <button onclick="switchView('terminal')" class="px-3 py-1.5 rounded bg-xtb-card border border-xtb-border text-xs text-xtb-steel hover:text-white transition">
+            &larr; Back to Terminal
+          </button>
+        </div>
+
+        <!-- Budget Selection Box -->
+        <div class="grid grid-cols-12 gap-6">
+          <div class="col-span-5 bg-xtb-panel p-5 rounded-lg border border-xtb-border space-y-4">
+            <span class="text-xs font-bold uppercase text-xtb-steel tracking-wide block">1. Deployment Budget</span>
+            <div class="grid grid-cols-3 gap-2">
+              <button onclick="setBudgetPreset(2500)" class="py-2 rounded bg-xtb-card border border-xtb-border text-xs font-mono font-bold hover:border-xtb-emerald text-white transition">$2,500</button>
+              <button onclick="setBudgetPreset(5000)" class="py-2 rounded bg-xtb-card border border-xtb-border text-xs font-mono font-bold hover:border-xtb-emerald text-white transition">$5,000</button>
+              <button onclick="setBudgetPreset(10000)" class="py-2 rounded bg-xtb-card border border-xtb-emerald text-xs font-mono font-bold text-xtb-emerald transition">$10,000</button>
+              <button onclick="setBudgetPreset(25000)" class="py-2 rounded bg-xtb-card border border-xtb-border text-xs font-mono font-bold hover:border-xtb-emerald text-white transition">$25,000</button>
+              <button onclick="setBudgetPreset(50000)" class="py-2 rounded bg-xtb-card border border-xtb-border text-xs font-mono font-bold hover:border-xtb-emerald text-white transition">$50,000</button>
+              <button onclick="setBudgetPreset(100000)" class="py-2 rounded bg-xtb-card border border-xtb-border text-xs font-mono font-bold hover:border-xtb-emerald text-white transition">$100,000</button>
+            </div>
+            
+            <div class="space-y-1">
+              <label class="text-xs text-xtb-steel font-semibold block">Custom Capital ($)</label>
+              <input type="number" id="sizer-budget-input" value="10000" step="500" oninput="calculateSizerAllocations()" class="w-full bg-xtb-card border border-xtb-border rounded px-3 py-2 font-mono text-sm text-white focus:outline-none focus:border-xtb-emerald" />
+            </div>
+
+            <label class="flex items-center gap-2 text-xs text-xtb-steel cursor-pointer pt-2">
+              <input type="checkbox" id="sizer-fractional-chk" onchange="calculateSizerAllocations()" class="rounded border-xtb-border bg-xtb-card text-xtb-emerald focus:ring-0" />
+              <span>Allow Fractional Shares (e.g. Robinhood / IBKR)</span>
+            </label>
+          </div>
+
+          <!-- Deployment Summary Cards -->
+          <div class="col-span-7 bg-xtb-panel p-5 rounded-lg border border-xtb-border flex flex-col justify-between">
+            <span class="text-xs font-bold uppercase text-xtb-steel tracking-wide block">2. Sizing Summary</span>
+            <div class="grid grid-cols-3 gap-4 my-auto">
+              <div class="p-3 bg-xtb-card border border-xtb-border rounded">
+                <span class="text-[10px] text-xtb-steel uppercase block">Total Capital</span>
+                <span id="sizer-total-budget" class="text-xl font-bold font-mono-num text-white">$10,000.00</span>
+              </div>
+              <div class="p-3 bg-xtb-card border border-xtb-border rounded">
+                <span class="text-[10px] text-xtb-steel uppercase block">Total Allocated</span>
+                <span id="sizer-total-allocated" class="text-xl font-bold font-mono-num text-xtb-emerald">$9,842.10</span>
+              </div>
+              <div class="p-3 bg-xtb-card border border-xtb-border rounded">
+                <span class="text-[10px] text-xtb-steel uppercase block">Cash Buffer</span>
+                <span id="sizer-cash-buffer" class="text-xl font-bold font-mono-num text-sky-400">$157.90</span>
+              </div>
+            </div>
+            <div class="flex justify-end gap-3 pt-4 border-t border-xtb-border">
+              <button onclick="submitAllSizerOrders()" class="px-5 py-2.5 rounded bg-xtb-emerald hover:bg-emerald-400 text-black font-extrabold text-xs uppercase tracking-wider transition">
+                Submit All Sized Orders to Broker
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sized Allocations Table & Order Slips -->
+        <div class="grid grid-cols-12 gap-6">
+          <div class="col-span-7 bg-xtb-panel border border-xtb-border rounded-lg overflow-hidden flex flex-col">
+            <div class="p-3 bg-[#14191d] border-b border-xtb-border font-bold text-xs text-white">
+              Target Constituent Allocations (Top 15 Picks)
+            </div>
+            <div class="max-h-96 overflow-y-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead class="bg-[#182026] text-xtb-steel font-bold uppercase text-[10px] sticky top-0 border-b border-xtb-border">
+                  <tr>
+                    <th class="py-2 px-3">Ticker</th>
+                    <th class="py-2 px-3 text-right">Target %</th>
+                    <th class="py-2 px-3 text-right">Price</th>
+                    <th class="py-2 px-3 text-right">Shares</th>
+                    <th class="py-2 px-3 text-right">Cost ($)</th>
+                  </tr>
+                </thead>
+                <tbody id="sizer-tbody" class="divide-y divide-xtb-border/60 font-mono-num">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Ready-to-Copy Retail Slips -->
+          <div class="col-span-5 bg-xtb-panel border border-xtb-border rounded-lg p-4 flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-xs font-bold uppercase text-xtb-steel">Retail Broker Order Slip</span>
+                <select id="slip-format-select" onchange="updateSlipFormat()" class="bg-xtb-card border border-xtb-border rounded text-xs px-2 py-1 text-white focus:outline-none">
+                  <option value="standard">Standard Text Slip</option>
+                  <option value="fidelity">Fidelity / Schwab</option>
+                  <option value="robinhood">Robinhood / Webull</option>
+                  <option value="ibkr">Interactive Brokers (CSV)</option>
+                </select>
+              </div>
+              <textarea id="slip-text-area" readonly class="w-full h-72 bg-xtb-bg border border-xtb-border rounded p-3 font-mono text-xs text-xtb-text focus:outline-none resize-none"></textarea>
+            </div>
+            <button onclick="copySlipToClipboard()" class="w-full py-2 mt-3 rounded bg-xtb-card border border-xtb-border hover:bg-xtb-hover text-white text-xs font-bold transition flex items-center justify-center gap-2">
+              Copy Order Slip to Clipboard
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- VIEW 3: AI INTELLIGENCE & SANITY MATRIX                              -->
+      <!-- ===================================================================== -->
+      <section id="view-sanity" class="hidden flex-1 p-6 space-y-6 max-w-7xl mx-auto w-full">
+        <div class="flex justify-between items-center border-b border-xtb-border pb-4">
+          <div>
+            <h1 class="text-xl font-black text-white">AI Intelligence & Sanity Safeguards</h1>
+            <p class="text-xs text-xtb-steel">Automated leakage verification, statistical hurdles, and monthly rank IC performance matrix.</p>
+          </div>
+          <button onclick="switchView('terminal')" class="px-3 py-1.5 rounded bg-xtb-card border border-xtb-border text-xs text-xtb-steel hover:text-white transition">
+            &larr; Back to Terminal
+          </button>
+        </div>
+
+        <!-- 3 Sanity Safeguards Grid -->
+        <div class="grid grid-cols-3 gap-6">
+          <div class="bg-xtb-panel p-5 rounded-lg border border-xtb-border space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-bold text-white">1. Label Shuffle Test</span>
+              <span id="sanity-shuffle-verdict" class="px-2 py-0.5 rounded text-[11px] font-bold badge-buy">PASSED</span>
+            </div>
+            <div id="sanity-shuffle-stats" class="text-xs font-mono text-xtb-steel">Shuffled IC: -0.0016 (t = -0.44)</div>
+            <p class="text-[11px] text-slate-400">Verifies that predictive power vanishes when labels are permuted, proving the model doesn't overfit random noise.</p>
+          </div>
+
+          <div class="bg-xtb-panel p-5 rounded-lg border border-xtb-border space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-bold text-white">2. 1-Day Lag Leakage</span>
+              <span id="sanity-lag-verdict" class="px-2 py-0.5 rounded text-[11px] font-bold badge-buy">PASSED</span>
+            </div>
+            <div id="sanity-lag-stats" class="text-xs font-mono text-xtb-steel">Base: +0.0346 -> Lagged: +0.0332</div>
+            <p class="text-[11px] text-slate-400">Verifies edge decays monotonically when inputs are lagged by +1 trading day, confirming zero lookahead bias.</p>
+          </div>
+
+          <div class="bg-xtb-panel p-5 rounded-lg border border-xtb-border space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-bold text-white">3. Multiple Testing</span>
+              <span id="sanity-mt-verdict" class="px-2 py-0.5 rounded text-[11px] font-bold badge-buy">SIGNIFICANT</span>
+            </div>
+            <div id="sanity-mt-stats" class="text-xs font-mono text-xtb-steel">Achieved t: 3.99 > Hurdle: 1.18</div>
+            <p class="text-[11px] text-slate-400">Bonferroni & Harvey-Liu hurdle test guaranteeing significance across multiple model trials.</p>
+          </div>
+        </div>
+
+        <!-- Monthly Spearman IC Matrix -->
+        <div class="bg-xtb-panel border border-xtb-border rounded-lg p-5 space-y-3">
+          <span class="text-xs font-bold uppercase text-white tracking-wider block">Out-Of-Sample Monthly Spearman IC Performance</span>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse font-mono-num">
+              <thead class="bg-[#182026] text-xtb-steel font-bold uppercase text-[10px] border-b border-xtb-border">
+                <tr>
+                  <th class="py-2 px-3">Month</th>
+                  <th class="py-2 px-3 text-right">Spearman IC</th>
+                  <th class="py-2 px-3">Signal Verdict</th>
+                </tr>
+              </thead>
+              <tbody id="monthly-ic-tbody" class="divide-y divide-xtb-border/60">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- VIEW: INTRADAY RISK MONITOR & CIRCUIT BREAKERS                        -->
+      <!-- ===================================================================== -->
+      <section id="view-risk" class="hidden flex-1 p-6 space-y-6 max-w-7xl mx-auto w-full">
+        <!-- Header Banner & Emergency Controls -->
+        <div class="bg-xtb-panel border border-xtb-border rounded-lg p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-3">
+              <h2 class="text-xl font-black text-white tracking-tight">Intraday Risk Circuit Breakers & Trailing Stops</h2>
+              <span id="risk-system-status-pill" class="px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-xtb-emerald text-black uppercase">
+                SYSTEM NORMAL
+              </span>
+            </div>
+            <p class="text-xs text-xtb-steel mt-1">
+              Automated stop-loss monitors evaluating 7.0% hard drawdown, 7.0% trailing peak high-water mark, and 2.5x ATR volatility stops.
+            </p>
+          </div>
+
+          <!-- Controls -->
+          <div class="flex items-center gap-3 flex-wrap">
+            <button onclick="loadRiskMonitor()" class="px-3 py-1.5 rounded bg-xtb-card border border-xtb-border hover:bg-xtb-hover text-white text-xs font-semibold transition flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-xtb-steel" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+              Refresh Telemetry
+            </button>
+            <div class="flex items-center gap-1 bg-xtb-card border border-xtb-border rounded p-1">
+              <span class="text-[10px] uppercase font-bold text-xtb-steel px-2">Liquidate To:</span>
+              <select id="risk-liquidate-destination" class="bg-xtb-panel text-white text-xs font-semibold border-none rounded px-2 py-1 focus:outline-none">
+                <option value="cash">Cash (100% USD)</option>
+                <option value="hedged_spy">Hedged SPY (Index ETF)</option>
+              </select>
+            </div>
+            <button onclick="triggerEmergencyLiquidation()" id="btn-emergency-liquidate-all" class="px-4 py-1.5 rounded bg-xtb-coral hover:bg-rose-600 text-white font-extrabold text-xs uppercase tracking-wide transition shadow-lg flex items-center gap-1.5">
+              Liquidate Breached Holdings
+            </button>
+          </div>
+        </div>
+
+        <!-- Telemetry Stat Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="bg-xtb-panel border border-xtb-border rounded-lg p-4">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-xtb-steel">Total Held Positions</span>
+            <div id="risk-stat-total" class="text-2xl font-mono-num font-bold text-white mt-1">0</div>
+            <span class="text-[11px] text-xtb-steel mt-0.5 block">Monitored in real-time</span>
+          </div>
+
+          <div class="bg-xtb-panel border border-xtb-border rounded-lg p-4">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-xtb-steel">Active Breaches</span>
+            <div id="risk-stat-breached" class="text-2xl font-mono-num font-bold text-xtb-emerald mt-1">0</div>
+            <span class="text-[11px] text-xtb-steel mt-0.5 block">Exceeds -7% stop or 2.5x ATR</span>
+          </div>
+
+          <div class="bg-xtb-panel border border-xtb-border rounded-lg p-4">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-xtb-steel">Caution Watchlist</span>
+            <div id="risk-stat-caution" class="text-2xl font-mono-num font-bold text-xtb-amber mt-1">0</div>
+            <span class="text-[11px] text-xtb-steel mt-0.5 block">Drawdown between -4% and -7%</span>
+          </div>
+
+          <div class="bg-xtb-panel border border-xtb-border rounded-lg p-4">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-xtb-steel">Circuit Breaker Policy</span>
+            <div class="text-sm font-semibold text-white mt-1.5">Trailing -7% / 2.5x ATR</div>
+            <span class="text-[11px] text-xtb-steel mt-0.5 block">Auto-liquidate & Telegram alert</span>
+          </div>
+        </div>
+
+        <!-- Live Positions Risk Telemetry Table -->
+        <div class="bg-xtb-panel border border-xtb-border rounded-lg overflow-hidden">
+          <div class="p-3 border-b border-xtb-border bg-[#14191d] flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-white">Live Open Positions Risk Matrix</span>
+              <span id="risk-positions-count-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-xtb-card border border-xtb-border text-xtb-steel">0 Holdings</span>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left">
+              <thead class="bg-xtb-card text-xtb-steel uppercase font-mono text-[10px] tracking-wider border-b border-xtb-border">
+                <tr>
+                  <th class="py-2.5 px-3">Ticker</th>
+                  <th class="py-2.5 px-3 text-right">Shares</th>
+                  <th class="py-2.5 px-3 text-right">Cost Basis</th>
+                  <th class="py-2.5 px-3 text-right">Peak (HWM)</th>
+                  <th class="py-2.5 px-3 text-right">Current Price</th>
+                  <th class="py-2.5 px-3 text-right">Entry DD%</th>
+                  <th class="py-2.5 px-3 text-right">Peak Trailing DD%</th>
+                  <th class="py-2.5 px-3 text-right">ATR 14</th>
+                  <th class="py-2.5 px-3 text-right">Stop Floor</th>
+                  <th class="py-2.5 px-3 text-right">Unrealized P&L</th>
+                  <th class="py-2.5 px-3 text-center">Status</th>
+                  <th class="py-2.5 px-3 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody id="risk-positions-tbody" class="divide-y divide-xtb-border/40 font-mono-num">
+                <tr><td colspan="12" class="py-8 text-center text-xtb-steel italic">Loading risk telemetry...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Historical Circuit Breaker Execution Audit Log -->
+        <div class="bg-xtb-panel border border-xtb-border rounded-lg overflow-hidden">
+          <div class="p-3 border-b border-xtb-border bg-[#14191d] flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-white">Circuit Breaker Execution Audit Log</span>
+            <span class="text-[11px] text-xtb-steel">Immutable SQLite Ledger</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left">
+              <thead class="bg-xtb-card text-xtb-steel uppercase font-mono text-[10px] tracking-wider border-b border-xtb-border">
+                <tr>
+                  <th class="py-2.5 px-3">Timestamp (UTC)</th>
+                  <th class="py-2.5 px-3">Ticker</th>
+                  <th class="py-2.5 px-3">Trigger Type</th>
+                  <th class="py-2.5 px-3 text-right">Entry Price</th>
+                  <th class="py-2.5 px-3 text-right">Peak Price</th>
+                  <th class="py-2.5 px-3 text-right">Exit Price</th>
+                  <th class="py-2.5 px-3 text-right">Realized PnL%</th>
+                  <th class="py-2.5 px-3 text-center">Hedge Action</th>
+                  <th class="py-2.5 px-3 text-center">Status</th>
+                  <th class="py-2.5 px-3">Notes</th>
+                </tr>
+              </thead>
+              <tbody id="risk-audit-tbody" class="divide-y divide-xtb-border/40 font-mono-num">
+                <tr><td colspan="10" class="py-8 text-center text-xtb-steel italic">No emergency circuit breaker liquidations recorded.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- VIEW 4: EXECUTION LEDGER & MANUAL ENTRY                              -->
+      <!-- ===================================================================== -->
+      <section id="view-ledger" class="hidden flex-1 p-6 space-y-6 max-w-7xl mx-auto w-full">
+        <div class="flex justify-between items-center border-b border-xtb-border pb-4">
+          <div>
+            <h1 class="text-xl font-black text-white">SQLite Execution Ledger</h1>
+            <p class="text-xs text-xtb-steel">Permanent audit trail of all manual and auto-routed broker fills.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button onclick="downloadFillsCSV()" class="px-3 py-1.5 rounded bg-xtb-card border border-xtb-border text-xs text-white hover:border-xtb-emerald transition">
+              Export CSV
+            </button>
+            <button onclick="switchView('terminal')" class="px-3 py-1.5 rounded bg-xtb-card border border-xtb-border text-xs text-xtb-steel hover:text-white transition">
+              &larr; Back to Terminal
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-6">
+          <!-- All Fills Table (8 cols) -->
+          <div class="col-span-8 bg-xtb-panel border border-xtb-border rounded-lg overflow-hidden flex flex-col">
+            <div class="p-3 bg-[#14191d] border-b border-xtb-border text-xs font-bold text-white">
+              Executed Trade Fills History
+            </div>
+            <div class="max-h-[500px] overflow-y-auto">
+              <table class="w-full text-left text-xs border-collapse font-mono-num">
+                <thead class="bg-[#182026] text-xtb-steel font-bold uppercase text-[10px] sticky top-0 border-b border-xtb-border">
+                  <tr>
+                    <th class="py-2 px-3">Date</th>
+                    <th class="py-2 px-3">Ticker</th>
+                    <th class="py-2 px-3">Action</th>
+                    <th class="py-2 px-3 text-right">Shares</th>
+                    <th class="py-2 px-3 text-right">Price</th>
+                    <th class="py-2 px-3">Broker / Status</th>
+                    <th class="py-2 px-3">Order ID</th>
+                  </tr>
+                </thead>
+                <tbody id="ledger-all-tbody" class="divide-y divide-xtb-border/60">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Manual Fill Form (4 cols) -->
+          <div class="col-span-4 bg-xtb-panel border border-xtb-border rounded-lg p-5 space-y-4">
+            <span class="text-xs font-bold uppercase text-white tracking-wide block">Record Manual Fill</span>
+            
+            <div class="space-y-3 text-xs">
+              <div>
+                <label class="text-xtb-steel font-semibold block mb-1">Execution Date</label>
+                <input type="date" id="manual-date" class="w-full bg-xtb-card border border-xtb-border rounded px-3 py-1.5 text-white focus:outline-none focus:border-xtb-emerald font-mono" />
+              </div>
+              <div>
+                <label class="text-xtb-steel font-semibold block mb-1">Ticker</label>
+                <input type="text" id="manual-ticker" value="AAPL" uppercase class="w-full bg-xtb-card border border-xtb-border rounded px-3 py-1.5 text-white focus:outline-none focus:border-xtb-emerald font-mono uppercase" />
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="text-xtb-steel font-semibold block mb-1">Side</label>
+                  <select id="manual-side" class="w-full bg-xtb-card border border-xtb-border rounded px-3 py-1.5 text-white focus:outline-none">
+                    <option value="BUY">BUY</option>
+                    <option value="SELL">SELL</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xtb-steel font-semibold block mb-1">Shares</label>
+                  <input type="number" id="manual-shares" value="10" min="1" class="w-full bg-xtb-card border border-xtb-border rounded px-3 py-1.5 text-white focus:outline-none font-mono" />
+                </div>
+              </div>
+              <div>
+                <label class="text-xtb-steel font-semibold block mb-1">Fill Price ($)</label>
+                <input type="number" id="manual-price" value="180.00" step="0.1" class="w-full bg-xtb-card border border-xtb-border rounded px-3 py-1.5 text-white focus:outline-none font-mono" />
+              </div>
+              <div>
+                <label class="text-xtb-steel font-semibold block mb-1">Notes</label>
+                <input type="text" id="manual-notes" value="Manual rebalance fill" class="w-full bg-xtb-card border border-xtb-border rounded px-3 py-1.5 text-white focus:outline-none text-xs" />
+              </div>
+              <button onclick="submitManualFill()" class="w-full py-2.5 mt-2 rounded bg-xtb-emerald hover:bg-emerald-400 text-black font-extrabold text-xs uppercase tracking-wide transition">
+                Record Fill in SQLite
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- VIEW 5: BROKER & SETTINGS                                            -->
+      <!-- ===================================================================== -->
+      <section id="view-settings" class="hidden flex-1 p-6 space-y-6 max-w-7xl mx-auto w-full">
+        <div class="flex justify-between items-center border-b border-xtb-border pb-4">
+          <div>
+            <h1 class="text-xl font-black text-white">Broker Integrations & System Settings</h1>
+            <p class="text-xs text-xtb-steel">Switch execution platforms and test operational alert dispatchers.</p>
+          </div>
+          <button onclick="switchView('terminal')" class="px-3 py-1.5 rounded bg-xtb-card border border-xtb-border text-xs text-xtb-steel hover:text-white transition">
+            &larr; Back to Terminal
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-6">
+          <!-- Broker Connection Status -->
+          <div class="bg-xtb-panel border border-xtb-border rounded-lg p-5 space-y-4">
+            <span class="text-xs font-bold uppercase text-white tracking-wide block">Active Broker Platform</span>
+            
+            <div class="space-y-2 text-xs">
+              <label class="flex items-center gap-3 p-3 bg-xtb-card border border-xtb-border rounded cursor-pointer hover:border-xtb-emerald transition">
+                <input type="radio" name="broker-choice" value="dry_run" id="radio-dry-run" checked onchange="switchBroker('dry_run')" class="text-xtb-emerald focus:ring-0" />
+                <div>
+                  <div class="font-bold text-white">Dry Run Simulator (Zero Keys)</div>
+                  <div class="text-xtb-steel text-[11px]">Local sandbox paper engine with instant fills.</div>
+                </div>
+              </label>
+
+              <label class="flex items-center gap-3 p-3 bg-xtb-card border border-xtb-border rounded cursor-pointer hover:border-xtb-emerald transition">
+                <input type="radio" name="broker-choice" value="alpaca" id="radio-alpaca" onchange="switchBroker('alpaca')" class="text-xtb-emerald focus:ring-0" />
+                <div>
+                  <div class="font-bold text-white">Alpaca Markets (Paper / Live)</div>
+                  <div id="settings-alpaca-status" class="text-xtb-steel text-[11px]">API keys required in .env file.</div>
+                </div>
+              </label>
+
+              <label class="flex items-center gap-3 p-3 bg-xtb-card border border-xtb-border rounded cursor-pointer hover:border-xtb-emerald transition">
+                <input type="radio" name="broker-choice" value="trading212" id="radio-t212" onchange="switchBroker('trading212')" class="text-xtb-emerald focus:ring-0" />
+                <div>
+                  <div class="font-bold text-white">Trading 212 (Demo / Live)</div>
+                  <div id="settings-t212-status" class="text-xtb-steel text-[11px]">API keys required in .env file.</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Alert Dispatcher -->
+          <div class="bg-xtb-panel border border-xtb-border rounded-lg p-5 space-y-4">
+            <span class="text-xs font-bold uppercase text-white tracking-wide block">Operational Alerts & Diagnostics</span>
+            <p class="text-xs text-xtb-steel">Test the Telegram notification webhook and verify SQLite audit logging.</p>
+            
+            <button onclick="triggerTestAlert()" class="px-4 py-2 rounded bg-xtb-card border border-xtb-border hover:bg-xtb-hover text-white text-xs font-bold transition flex items-center gap-2">
+              Dispatch Test Telegram Alert
+            </button>
+
+            <div class="p-4 bg-xtb-card border border-xtb-border rounded space-y-1.5 text-xs text-xtb-steel">
+              <div class="font-semibold text-white">Active Strategy Rules:</div>
+              <div>&bull; Max Position Cap: <b class="text-white">8.0%</b></div>
+              <div>&bull; Target Holdings: <b class="text-white">15 stocks</b></div>
+              <div>&bull; Turnover Buffer: <b class="text-white">0.5% drift threshold</b></div>
+              <div>&bull; VIX Baseline Scale: <b class="text-white">20.0 / VIX</b></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 bg-[#161c20] border border-xtb-emerald px-4 py-3 rounded-lg shadow-2xl flex items-center gap-3 text-xs hide">
+    <span id="toast-indicator" class="w-2 h-2 rounded-full bg-xtb-emerald shrink-0"></span>
+    <span id="toast-msg" class="font-semibold text-white">Order executed successfully!</span>
+  </div>
+
+  <!-- Client Application Logic -->
+  <script src="/static/app.js"></script>
+</body>
+</html>

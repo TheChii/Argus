@@ -1,0 +1,21 @@
+[Unit]
+Description=Argus Quant Institutional Execution & Monitoring Terminal (Port 8501)
+After=network.target
+
+[Service]
+Type=simple
+# User to execute the service (e.g. argus, ubuntu, or host user)
+User=%u
+# Working directory containing Argus Quant repository
+WorkingDirectory=%h/Documents/Finance-AI-model
+Environment="PATH=%h/Documents/Finance-AI-model/.venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONPATH=%h/Documents/Finance-AI-model"
+Environment="DATA_DIR=%h/Documents/Finance-AI-model/data"
+ExecStart=%h/Documents/Finance-AI-model/.venv/bin/python main.py dashboard --host 0.0.0.0 --port 8501
+Restart=always
+RestartSec=5
+StandardOutput=append:%h/Documents/Finance-AI-model/data/logs/operations_terminal.log
+StandardError=append:%h/Documents/Finance-AI-model/data/logs/operations_terminal.log
+
+[Install]
+WantedBy=multi-user.target default.target

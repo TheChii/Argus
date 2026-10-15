@@ -1,0 +1,83 @@
+/* Argus Quant Institutional Trading Terminal — XTB Dark Theme CSS */
+
+/* Custom Dark Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #111618;
+}
+::-webkit-scrollbar-thumb {
+  background: #263038;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #374653;
+}
+
+/* Tabular Numbers */
+.font-mono-num {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* XTB Badges */
+.badge-buy {
+  background-color: rgba(0, 194, 120, 0.15);
+  color: #00c278;
+  border: 1px solid rgba(0, 194, 120, 0.4);
+}
+
+.badge-sell {
+  background-color: rgba(246, 70, 93, 0.15);
+  color: #f6465d;
+  border: 1px solid rgba(246, 70, 93, 0.4);
+}
+
+.badge-hold {
+  background-color: rgba(131, 146, 165, 0.15);
+  color: #8392a5;
+  border: 1px solid #323f4b;
+}
+
+/* News Sentiment Tone Pills */
+.tone-pos {
+  background-color: rgba(0, 194, 120, 0.15);
+  color: #00c278;
+}
+
+.tone-neu {
+  background-color: rgba(131, 146, 165, 0.15);
+  color: #8392a5;
+}
+
+.tone-neg {
+  background-color: rgba(246, 70, 93, 0.15);
+  color: #f6465d;
+}
+
+/* Active Row in Watchlist */
+.watchlist-row.active {
+  background-color: #1a2228 !important;
+  border-left: 3px solid #00c278 !important;
+}
+
+/* SHAP Attribution Meter */
+.meter-bar {
+  transition: width 0.3s ease-in-out;
+}
+
+/* Toast Notification */
+#toast {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+#toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+#toast.hide {
+  opacity: 0;
+  transform: translateY(16px);
+  pointer-events: none;
+}

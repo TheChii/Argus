@@ -1,0 +1,94 @@
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# C++ Compilation Artifacts & Binaries
+*.so
+*.dylib
+*.dll
+*.o
+*.a
+src/features/libfast_features.so
+src/features/fast_features_cli
+
+# Environment & Secret Configurations
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Local SQLite Databases & Process Concurrency Locks
+*.db
+*.db-wal
+*.db-shm
+data/dashboard/*.db
+data/dashboard/*.db-wal
+data/dashboard/*.db-shm
+*.lock
+.pipeline.lock
+
+# Log Files
+*.log
+logs/
+data/logs/*
+!data/logs/.gitkeep
+
+# Data Directory & User-Gathered Datasets (Keep only directory structure via .gitkeep)
+data/*
+!data/*/
+!data/**/
+!data/**/.gitkeep
+data/prices/*
+!data/prices/.gitkeep
+data/macro/*
+!data/macro/.gitkeep
+data/news/*
+!data/news/*/
+!data/news/.gitkeep
+data/news/archive/*
+!data/news/archive/.gitkeep
+data/scores/*
+!data/scores/.gitkeep
+data/reports/*
+!data/reports/.gitkeep
+data/fundamentals/*
+!data/fundamentals/.gitkeep
+data/dashboard/*
+!data/dashboard/.gitkeep
+!data/dashboard/today_snapshot.json
+data/portfolio/*
+!data/portfolio/.gitkeep
+data/backtest/*
+!data/backtest/.gitkeep
+data/logs/*
+!data/logs/.gitkeep
+data/*.parquet
+data/*.json
+data/*.db
+data/*.lock
+
+# IDEs, Editors & OS Metadata
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+.streamlit/
+
+# Documentation Build Tools & Intermediate Formats
+docs/generate_manual.py
+docs/*.html
+docs/katex/
